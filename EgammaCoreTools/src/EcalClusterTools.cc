@@ -136,13 +136,13 @@ float EcalClusterTools::matrixEnergy( const reco::BasicCluster &cluster, const E
     // fast version
   CaloNavigator<DetId> cursor = CaloNavigator<DetId>( id, topology->getSubdetectorTopology( id.det(), id.subdetId() ) );
     float energy = 0;
-    //const std::vector< std::pair<DetId, float> >& v_id = cluster.hitsAndFractions();
+    const std::vector< std::pair<DetId, float> >& v_id = cluster.hitsAndFractions();
     for ( int i = ixMin; i <= ixMax; ++i ) {
         for ( int j = iyMin; j <= iyMax; ++j ) {
 	  cursor.home();
 	  cursor.offsetBy( i, j );
-	  //float frac=getFraction(v_id,*cursor);
-	  energy += recHitEnergy( *cursor, recHits )*1.;
+	  float frac=getFraction(v_id,*cursor);
+	  energy += recHitEnergy( *cursor, recHits )*frac;
         }
     }
     // slow elegant version
@@ -158,14 +158,14 @@ float EcalClusterTools::matrixEnergy( const reco::BasicCluster &cluster, const E
 {
     // fast version
   CaloNavigator<DetId> cursor = CaloNavigator<DetId>( id, topology->getSubdetectorTopology( id.det(), id.subdetId() ) );
-  //onst std::vector< std::pair<DetId, float> >& v_id = cluster.hitsAndFractions();
+    const std::vector< std::pair<DetId, float> >& v_id = cluster.hitsAndFractions();
     float energy = 0;
     for ( int i = ixMin; i <= ixMax; ++i ) {
         for ( int j = iyMin; j <= iyMax; ++j ) {
             cursor.home();
             cursor.offsetBy( i, j );
-            //float frac=getFraction(v_id,*cursor);
-            energy += recHitEnergy( *cursor, recHits, flagsexcl, severitiesexcl, sevLv )*1;
+            float frac=getFraction(v_id,*cursor);
+            energy += recHitEnergy( *cursor, recHits, flagsexcl, severitiesexcl, sevLv )*frac;
         }
     }
     return energy;
@@ -1033,22 +1033,22 @@ std::vector<float> EcalClusterTools::localCovariances(const reco::BasicCluster &
         const double crysSize = isBarrel ? barrelCrysSize : endcapCrysSize;
 
         CaloNavigator<DetId> cursor = CaloNavigator<DetId>( seedId, topology->getSubdetectorTopology( seedId.det(), seedId.subdetId() ) );
+
         for ( int eastNr = -2; eastNr <= 2; ++eastNr ) { //east is eta in barrel
             for ( int northNr = -2; northNr <= 2; ++northNr ) { //north is phi in barrel
                 cursor.home();
                 cursor.offsetBy( eastNr, northNr);
- 
-                //float frac = 1;//getFraction(v_id,*cursor);
-                float energy = recHitEnergy( *cursor, recHits );//*frac;
-		
+                float frac = getFraction(v_id,*cursor);
+                float energy = recHitEnergy( *cursor, recHits )*frac;
                 if ( energy <= 0 ) continue;
 
-		float dEta = getNrCrysDiffInEta(*cursor,seedId) - mean5x5PosInNrCrysFromSeed.first;
-		float dPhi = 0;
+                float dEta = getNrCrysDiffInEta(*cursor,seedId) - mean5x5PosInNrCrysFromSeed.first;
+                float dPhi = 0;
 
                 if(isBarrel)  dPhi = getNrCrysDiffInPhi(*cursor,seedId) - mean5x5PosInNrCrysFromSeed.second;
                 else dPhi = getDPhiEndcap(*cursor,mean5x5XYPos.first,mean5x5XYPos.second);
-		
+
+
                 double w = std::max(0.0, w0 + log( energy / e_5x5 ));
 
                 denominator += w;
@@ -1057,7 +1057,8 @@ std::vector<float> EcalClusterTools::localCovariances(const reco::BasicCluster &
                 numeratorPhiPhi += w * dPhi * dPhi;
             } //end east loop
         }//end north loop
-		
+
+
         //multiplying by crysSize to make the values compariable to normal covariances
         if (denominator != 0.0) {
             covEtaEta =  crysSize*crysSize* numeratorEtaEta / denominator;
@@ -1120,8 +1121,8 @@ std::vector<float> EcalClusterTools::localCovariances(const reco::BasicCluster &
             for ( int northNr = -2; northNr <= 2; ++northNr ) { //north is phi in barrel
                 cursor.home();
                 cursor.offsetBy( eastNr, northNr);
-                //float frac = getFraction(v_id,*cursor); 
-                float energy = recHitEnergy( *cursor, recHits,flagsexcl, severitiesexcl, sevLv);//*frac;
+                float frac = getFraction(v_id,*cursor); 
+                float energy = recHitEnergy( *cursor, recHits,flagsexcl, severitiesexcl, sevLv)*frac;
                 if ( energy <= 0 ) continue;
 
                 float dEta = getNrCrysDiffInEta(*cursor,seedId) - mean5x5PosInNrCrysFromSeed.first;
@@ -1306,7 +1307,7 @@ float EcalClusterTools::getNormedIX(const DetId& id)
     if( id.subdetId()==EcalEndcap ) ix = EEDetId(id).ix();
     if( id.subdetId()==EcalShashlik ) ix = EKDetId(id).ix();
     if( ix != 0) {
-      int iXNorm  = ix - 105;
+      int iXNorm  = ix - 50;
       if(iXNorm<=0) iXNorm--;
       return iXNorm;
     }
@@ -1322,7 +1323,7 @@ float EcalClusterTools::getNormedIY(const DetId& id)
     if( id.subdetId()==EcalEndcap ) iy = EEDetId(id).iy();
     if( id.subdetId()==EcalShashlik ) iy = EKDetId(id).iy();
     if( iy != 0 ) {
-      int iYNorm  = iy - 105;
+      int iYNorm  = iy - 50;
       if(iYNorm<=0) iYNorm--;
       return iYNorm;
     }
